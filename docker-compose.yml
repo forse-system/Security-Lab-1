@@ -1,56 +1,60 @@
-version: '3.8'
-
 services:
-  dnsmasq:
+  forwarder:
+    restart: always
     build: ./dnsmasq
-    container_name: dnspooq-dnsmasq
+    volumes:
+      - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf
+    cap_add:
+      - NET_ADMIN
     networks:
-      dnspooq:
-        # ここはdnsmasqコンテナのIPに合わせる（10.10.0.0/24範囲で設定）
+      vpcbr:
         ipv4_address: 10.10.0.2
-    environment:
-      # ここは既存のcacheコンテナのIPに合わせる（実際のホストIP）
-      - CACHE_IP=192.168.115.151  # 既存cacheコンテナのEIPに変更する
-    ports:
-      - "53:53/udp"
-    cap_add:
-      - NET_ADMIN
-    
   attacker:
+    restart: always
     build: ./attacker
-    container_name: dnspooq-attacker
-    networks:
-      dnspooq:
-        # ここはattackerコンテナのIPに合わせる（10.10.0.0/24範囲で設定）
-        ipv4_address: 10.10.0.3
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
     volumes:
       - ./attacker:/app
-    
-  client:
-    build: ./client
-    container_name: dnspooq-client
+    cap_add:
+      - NET_ADMIN
     networks:
-      dnspooq:
-        # ここはclientコンテナのIPに合わせる（10.10.0.0/24範囲で設定）
+      vpcbr:
+        ipv4_address: 10.10.0.3
+    dns:
+      - 10.10.0.2
+  cache:
+    restart: always
+    build: ./cache
+    volumes:
+      - ./cache:/app
+    cap_add:
+      - NET_ADMIN
+    networks:
+      vpcbr:
+        ipv4_address: 10.10.0.4
+  malicious-server:
+    restart: always
+    build: ./malicious-server
+    networks:
+      vpcbr:
+        ipv4_address: 10.10.0.5
+    ports:
+      - "8080:80"
+  client:
+    restart: always
+    build: ./client
+    networks:
+      vpcbr:
         ipv4_address: 10.10.0.6
+    dns:
+      - 10.10.0.2
     ports:
       - "6080:80"
-    dns:
-      # ここはdnsmasqコンテナのIPに合わせる（10.10.0.0/24範囲）
-      - 10.10.0.2  # dnsmasqコンテナのIP
     environment:
       - VNC_PASSWORD=password
-    volumes:
-      - /dev/shm:/dev/shm
-
+      - USER=root
 networks:
-  dnspooq:
+  vpcbr:
     driver: bridge
     ipam:
-      config:
-        # 注意：作成時にIPは10.10.0.xになる（10.10.0.0/24範囲）
-        # 既存のcache(10.10.0.14)とmalicious(10.10.0.16)と重複しないように設定
-        - subnet: 10.10.0.0/24
+     config:
+       - subnet: "10.10.0.0/24"

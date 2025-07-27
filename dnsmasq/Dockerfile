@@ -1,17 +1,20 @@
 FROM alpine:3.13
 
-# Copy pre-compiled dnsmasq from existing image
-COPY --from=gonkori/dnspooq-dnsmasq:v8 /usr/local/sbin/dnsmasq /usr/local/sbin/dnsmasq
+WORKDIR /build
+RUN apk --no-cache add linux-headers nettle-dev alpine-sdk
+ADD http://www.thekelleys.org.uk/dnsmasq/dnsmasq-2.82.tar.gz /build
 
-# Create startup script for dynamic cache IP configuration
-RUN mkdir -p /etc/dnsmasq && \
-    echo "log-queries" > /etc/dnsmasq/dnsmasq.conf && \
-    echo "no-resolv" >> /etc/dnsmasq/dnsmasq.conf && \
-    echo "# Cache IP will be set by environment variable" >> /etc/dnsmasq/dnsmasq.conf
+RUN tar zxvf dnsmasq-2.82.tar.gz
+RUN cd dnsmasq-2.82 && \
+    sed -ie 's/TIMEOUT 10/TIMEOUT 1800/' src/config.h && \
+    sed -ie 's/FTABSIZ 150/FTABSIZ 2000/' src/config.h && \
+    sed -ie 's/RANDOM_SOCKS 64/RANDOM_SOCKS 500/' src/config.h && \
+    make clean && \
+    make "COPTS=-DHAVE_DNSSEC" && \
+    make "COPTS=-DHAVE_DNSSEC" install
+
+VOLUME /etc/dnsmasq
 
 EXPOSE 53 53/udp
 
-# Use environment variable for cache IP configuration
-# 変更: デフォルトキャッシュIPを10.10.0.14から192.168.115.151に更新
-# 理由: 新しいネットワーク構成要件に合わせるため
-CMD sh -c "echo server=\${CACHE_IP:-192.168.115.151} >> /etc/dnsmasq/dnsmasq.conf && echo Starting dnsmasq with cache IP: \${CACHE_IP:-192.168.115.151} && cat /etc/dnsmasq/dnsmasq.conf && /usr/local/sbin/dnsmasq -k --log-facility=- --conf-file=/etc/dnsmasq/dnsmasq.conf"
+ENTRYPOINT ["dnsmasq", "-k", "--log-facility=-"]

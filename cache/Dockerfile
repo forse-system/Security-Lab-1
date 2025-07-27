@@ -5,7 +5,6 @@ WORKDIR /app
 
 # Copy application files
 COPY dns_proxy.py /app/
-COPY sniff.py /app/
 
 CMD ["python", "/app/dns_proxy.py"]
 
