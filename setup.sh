@@ -11,12 +11,16 @@ network:
   ethernets:
     enp1s0:
       dhcp4: true
+      dhcp6: true
       nameservers:
         addresses: [8.8.8.8]
       dhcp4-overrides:
         use-dns: false
+      dhcp6-overrides:
+        use-dns: false
 EOF'
 
+sudo chmod 600 /etc/netplan/01-dns.yaml
 sudo netplan apply
 
 # Now install other packages with proper DNS resolution
