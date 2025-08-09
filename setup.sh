@@ -7,8 +7,10 @@ sudo apt-get install netplan.io -y
 sudo bash -c 'cat > /etc/netplan/01-dns.yaml << EOF
 network:
   version: 2
+  renderer: networkd
   ethernets:
-    "*":
+    enp1s0:
+      dhcp4: true
       nameservers:
         addresses: [8.8.8.8]
       dhcp4-overrides:
