@@ -1,6 +1,23 @@
 #!/bin/bash
 
 sudo apt-get update -y
+sudo apt-get install netplan.io -y
+
+# Configure DNS via netplan first
+sudo bash -c 'cat > /etc/netplan/01-dns.yaml << EOF
+network:
+  version: 2
+  ethernets:
+    "*":
+      nameservers:
+        addresses: [8.8.8.8]
+      dhcp4-overrides:
+        use-dns: false
+EOF'
+
+sudo netplan apply
+
+# Now install other packages with proper DNS resolution
 sudo apt-get install ca-certificates curl -y
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
