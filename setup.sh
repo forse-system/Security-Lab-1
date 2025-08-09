@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Fix hostname resolution first
-sudo sh -c 'H=$(hostname -s); echo "127.0.1.1 $H" >> /etc/hosts'
-
+# Configure DNS via netplan first
 sudo apt-get update -y
 sudo apt-get install netplan.io -y
 
-# Simple DNS configuration via netplan
 sudo bash -c 'cat > /etc/netplan/01-dns.yaml << EOF
 network:
   version: 2
@@ -35,3 +32,6 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 sudo apt-get install dnsutils -y
 
 sudo bash -c 'mkdir -p /etc/systemd/resolved.conf.d && printf "[Resolve]\nDNSStubListener=no\n" > /etc/systemd/resolved.conf.d/no-stub.conf && systemctl restart systemd-resolved'
+sudo sh -c 'H=$(hostname -s); F=$(hostname -f 2>/dev/null || echo "$H.localdomain"); \
+grep -qE "^127\.0\.1\.1[[:space:]]+$H(\s|$)" /etc/hosts || \
+echo "127.0.1.1 $H $F" >> /etc/hosts'
